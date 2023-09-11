@@ -1,8 +1,9 @@
 #include "serialization.h"
 #include <vector>
+#include <sstream>
 #include "rapidjson.h"
 #include "reader.h"
-#include <sstream>
+#include "common.h"
 using namespace lixiang_serialization;
 using namespace rapidjson;
 
@@ -29,18 +30,6 @@ struct json {
   };
 };
 
-namespace lixiang_serialization {
-template<typename STREAM>
-static void dump_to(STREAM &s, const json::any &value) {
-  s << value;
-}
-
-template<typename STREAM>
-static void parse_from(STREAM &s, const json::any &value) {
-  s >> value;
-}
-}
-
 struct Person;
 
 struct Singer {
@@ -50,7 +39,7 @@ struct Singer {
  public:
   template<typename S>
   void serialization(S &serializer) {
-    serializer(type, age);
+    serializer.do_serialization(type, age);
   }
 };
 
@@ -62,8 +51,8 @@ struct Address {
  public:
   template<typename S>
   void serialization(S &serializer) {
-    serializer(country, city, street);
-    serializer(neighbors);
+    serializer.do_serialization(country, city, street);
+    serializer.do_serialization(neighbors);
   }
 };
 
@@ -73,7 +62,7 @@ struct Friend {
  public:
   template<typename S>
   void serialization(S &serializer) {
-    serializer(relation, secret);
+    serializer.do_serialization(relation, secret);
   }
 };
 
@@ -86,11 +75,25 @@ struct Person {
  public:
   template<typename S>
   void serialization(S &serializer) {
-    serializer(name, age, address, secret);
+    serializer.do_serialization(name, age, address, secret);
   }
 };
 
 int main() {
+  // Test make item serialization head
+  auto a = make_head(object_type_t::fundamental, 128);
+  auto [type, size] = parse_head(a);
+  assert(type == object_type_t::fundamental);
+  assert(size == 128);
+
+  // Test dump
+  default_archive archive{"", 0};
+  dump_to(archive, "123");
+  std::string str;
+  parse_from(archive, str);
+  assert(str == "123");
+
+  /*
   Friend f1{"my best friend", Singer{"rocker", 18}};
   Friend f2{"new friend", "little girl"};
   Friend f3{"third friend", 3};
@@ -99,13 +102,15 @@ int main() {
   Person p1{"p1", 4, addr1, {f1, f2, f3}, "the kind!"};
 
 
-  std::ostringstream output;
-  serialization s(output);
+  default_archive data{"", 0};
+  serialization s(data);
+  s.direction = direction_t::serialization;
   p2.serialization(s);
   Person b;
-  std::istringstream input(output.str());
-  b.serialization(input);
+  s.direction = direction_t::deserialization;
+  b.serialization(s);
   std::cout << b.name;
+   */
 
   // TODO. 以下是伪代码，需要笔试者具体实现 // auto json = dump(p1)
   // std::cout << json << std::endl // std::cout << p1 << std::endl

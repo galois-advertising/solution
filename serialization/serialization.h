@@ -1,60 +1,48 @@
 #pragma once
 #include <iostream>
 #include <sstream>
+#include "common.h"
 #include "imp.h"
 
 namespace lixiang_serialization {
 
-struct direction_serialization_t {};
-
-struct direction_deserialization_t {};
-
-template <typename T>
-struct get_serialization_type {
+enum class direction_t : uint8_t {
+  serialization, deserialization
 };
 
-template<>
-struct get_serialization_type<std::ostringstream> {
-  typedef direction_serialization_t direction_t;
-};
-
-template<>
-struct get_serialization_type<std::istringstream> {
-  typedef direction_deserialization_t direction_t;
-};
-
-
-template <typename STREAM>
+template <typename ARCHIVE>
 class serialization {
  public:
-  STREAM &stream;
-  serialization(STREAM &_stream) : stream(_stream) {
+  ARCHIVE &archive;
+
+  direction_t direction;
+
+  serialization(ARCHIVE &_stream) : archive(_stream) {
   }
 
   template<typename FIRST, typename ...OTHER>
-  void do_serialization(FIRST &&first, OTHER&& ...other) {
-    dump_to(stream, first);
+  void serialization_helper(FIRST &&first, OTHER&& ...other) {
+    dump_to(archive, first);
     if constexpr (sizeof...(other) != 0) {
-      do_serialization(std::forward<OTHER>(other)...);
+      serialization_helper(std::forward<OTHER>(other)...);
     }
   }
 
   template<typename FIRST, typename ...OTHER>
-  void do_deserialization(FIRST &&first, OTHER&& ...other) {
-    parse_from(stream, first);
+  void deserialization_helper(FIRST &&first, OTHER&& ...other) {
+    parse_from(archive, first);
     if constexpr (sizeof...(other) != 0) {
-      do_deserialization(std::forward<OTHER>(other)...);
+      deserialization_helper(std::forward<OTHER>(other)...);
     }
   }
 
-  template <typename ...T>
-  serialization<STREAM> &operator()(T&& ...args) {
-    if constexpr (std::is_same_v<typename get_serialization_type<STREAM>::direction_t, direction_serialization_t>) {
-      do_serialization(std::forward<T>(args)...);
+  template<typename ...TS>
+  void do_serialization(TS &&...args) {
+    if (direction == direction_t::serialization) {
+      serialization_helper(std::forward<TS>(args)...);
     } else {
-      do_deserialization(std::forward<T>(args)...);
+      deserialization_helper(std::forward<TS>(args)...);
     }
-    return *this;
   }
 };
 
