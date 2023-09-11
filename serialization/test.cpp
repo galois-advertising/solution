@@ -28,6 +28,7 @@ struct json {
     }
   };
 };
+
 namespace lixiang_serialization {
 template<typename STREAM>
 static void dump_to(STREAM &s, const json::any &value) {
