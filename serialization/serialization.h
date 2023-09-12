@@ -10,29 +10,28 @@ enum class direction_t : uint8_t {
   serialization, deserialization
 };
 
-template <typename ARCHIVE>
 class serialization {
  public:
-  ARCHIVE &archive;
+  json_archive &archive;
 
   direction_t direction;
 
-  serialization(ARCHIVE &_stream) : archive(_stream) {
+  serialization(json_archive &_stream) : archive(_stream) {
   }
 
   template<typename FIRST, typename ...OTHER>
-  void serialization_helper(FIRST &&first, OTHER&& ...other) {
-    dump_to(archive, first);
-    if constexpr (sizeof...(other) != 0) {
-      serialization_helper(std::forward<OTHER>(other)...);
+  void serialization_helper(FIRST &&arg1, OTHER&& ...args) {
+    operation_imp<typename std::remove_reference_t<FIRST>::first_type>::dump_to(archive, arg1);
+    if constexpr (sizeof...(args) != 0) {
+      serialization_helper(std::forward<OTHER>(args)...);
     }
   }
 
   template<typename FIRST, typename ...OTHER>
-  void deserialization_helper(FIRST &&first, OTHER&& ...other) {
-    parse_from(archive, first);
-    if constexpr (sizeof...(other) != 0) {
-      deserialization_helper(std::forward<OTHER>(other)...);
+  void deserialization_helper(FIRST &&arg1, OTHER&& ...args) {
+    arg1.first = operation_imp<typename std::remove_reference_t<FIRST>::first_type>::parse_from(archive, arg1.second);
+    if constexpr (sizeof...(args) != 0) {
+      deserialization_helper(std::forward<OTHER>(args)...);
     }
   }
 

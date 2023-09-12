@@ -1,34 +1,10 @@
 #include "serialization.h"
 #include <vector>
-#include <sstream>
+#include <any>
 #include "rapidjson.h"
-#include "reader.h"
 #include "common.h"
 using namespace lixiang_serialization;
 using namespace rapidjson;
-
-
-struct json {
-  struct any {
-    std::string value;
-    any() : value("empty") {
-    }
-
-    template<typename T>
-    any(const T &v) {
-      std::stringstream ss;
-      ss << "[Some object of size " << sizeof(T) << "]";
-      value = ss.str();
-    }
-
-    template<typename T>
-    any(const T &&v) {
-      std::stringstream ss;
-      ss << "[Some object of size " << sizeof(T) << "]";
-      value = ss.str();
-    }
-  };
-};
 
 struct Person;
 
@@ -39,7 +15,7 @@ struct Singer {
  public:
   template<typename S>
   void serialization(S &serializer) {
-    serializer.do_serialization(type, age);
+    serializer.do_serialization(_nvp(type), _nvp(age));
   }
 };
 
@@ -51,18 +27,18 @@ struct Address {
  public:
   template<typename S>
   void serialization(S &serializer) {
-    serializer.do_serialization(country, city, street);
+    serializer.do_serialization(_nvp(country), _nvp(city), _nvp(street));
     serializer.do_serialization(neighbors);
   }
 };
 
 struct Friend {
   std::string relation;
-  json::any secret;
+  std::any secret;
  public:
   template<typename S>
   void serialization(S &serializer) {
-    serializer.do_serialization(relation, secret);
+    serializer.do_serialization(_nvp(relation), _nvp(secret));
   }
 };
 
@@ -71,28 +47,16 @@ struct Person {
   int age;
   Address address;
   std::vector<Friend> _friends;
-  json::any secret;
+  std::any secret;
  public:
   template<typename S>
   void serialization(S &serializer) {
-    serializer.do_serialization(name, age, address, secret);
+    serializer.do_serialization(_nvp(name), _nvp(age), _nvp(address), _nvp(secret));
   }
 };
 
 int main() {
-  // Test make item serialization head
-  auto a = make_head(object_type_t::fundamental, 128);
-  auto [type, size] = parse_head(a);
-  assert(type == object_type_t::fundamental);
-  assert(size == 128);
-
-  // Test dump
-  default_archive archive{"", 0};
-  dump_to(archive, "123");
-  std::string str;
-  parse_from(archive, str);
-  assert(str == "123");
-
+  Singer s{"it is a type str", 12};
   /*
   Friend f1{"my best friend", Singer{"rocker", 18}};
   Friend f2{"new friend", "little girl"};
@@ -100,17 +64,18 @@ int main() {
   Person p2{"p2", 3, Address{"china", "shanghai", "putuo"}};
   Address addr1{"china", "beijing", "wangjing", {p2}};
   Person p1{"p1", 4, addr1, {f1, f2, f3}, "the kind!"};
-
-
-  default_archive data{"", 0};
-  serialization s(data);
-  s.direction = direction_t::serialization;
-  p2.serialization(s);
-  Person b;
-  s.direction = direction_t::deserialization;
-  b.serialization(s);
-  std::cout << b.name;
    */
+
+
+  json_archive data;
+  data.Parse("{}");
+  serialization ser(data);
+  ser.direction = direction_t::serialization;
+  s.serialization(ser);
+  Singer b;
+  ser.direction = direction_t::deserialization;
+  b.serialization(ser);
+  std::cout << b.type;
 
   // TODO. 以下是伪代码，需要笔试者具体实现 // auto json = dump(p1)
   // std::cout << json << std::endl // std::cout << p1 << std::endl
