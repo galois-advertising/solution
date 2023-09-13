@@ -1,7 +1,8 @@
 #include "serialization.h"
 #include <vector>
 #include <any>
-#include "rapidjson.h"
+#include "writer.h"
+#include "stringbuffer.h"
 #include "common.h"
 using namespace lixiang_serialization;
 using namespace rapidjson;
@@ -72,6 +73,11 @@ int main() {
   serialization ser(data);
   ser.direction = direction_t::serialization;
   s.serialization(ser);
+  StringBuffer buffer;
+  Writer<StringBuffer> writer(buffer);
+  data.Accept(writer);
+  // Output {"project":"rapidjson","stars":11}
+  std::cout << buffer.GetString() << std::endl;
   Singer b;
   ser.direction = direction_t::deserialization;
   b.serialization(ser);
