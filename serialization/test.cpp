@@ -59,6 +59,24 @@ int main() {
   ser.direction = direction_t::serialization;
   addr1.serialization(ser);
   std::cout << data << std::endl;
+  /** now data is
+  {
+    "country": "china",
+    "city": "beijing",
+    "street": "wangjing",
+    "neighbor": [{
+      "name": "name1",
+      "age": 12
+    }, {
+      "name": "name2",
+      "age": 13
+    }],
+    "secret": {
+      "type": "aa",
+      "age": 12
+    }
+  }
+  **/
 
   // deserialization from data
   Address addr2;
