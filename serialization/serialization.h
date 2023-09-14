@@ -23,42 +23,72 @@ struct is_std_vector : std::false_type {};
 template<typename T, typename A>
 struct is_std_vector<std::vector<T,A>> : std::true_type {};
 
-
-class serialization {
- public:
+class serializer {
   json_archive &archive;
+ public:
   direction_t direction;
 
-  serialization(json_archive &_stream) : archive(_stream) {
+  class json_any : public boost::json::object {
+    template<typename T>
+    void reset(T &&b) {
+      serializer ser(*this);
+      ser.direction = direction_t::serialization;
+      b.serialization(ser);
+    }
+  public:
+    template<typename T>
+    void any_cast(T &value) {
+      serializer ser(*this);
+      ser.direction = direction_t::deserialization;
+      value.serialization(ser);
+    }
+
+    template<typename T>
+    json_any(const T &b) {
+      reset(b);
+    }
+
+    json_any() : boost::json::object() {}
+
+    template<typename T>
+    json_any(T &&b) {
+      reset(std::forward<T>(b));
+    }
+
+    template<typename T>
+    json_any &operator=(T &&data) {
+      reset(std::forward<T>(data));
+      return *this;
+    }
+
+    template<typename T>
+    json_any &operator=(const T &data) {
+      reset(data);
+      return *this;
+    }
+  };
+
+  serializer(json_archive &_stream) : archive(_stream) {
   }
 
   template<typename T>
   static void dump_to(json_archive &s, nvp<T> &&value) {
     using TT = typename std::remove_reference<T>::type;
-    if constexpr (std::is_fundamental_v<TT> || std::is_same_v<TT, std::string>) {
+    if constexpr (std::is_fundamental_v<TT> || std::is_same_v<TT, std::string> || std::is_same_v<TT, json_any>) {
       s[value.second] = value.first;
     } else if constexpr(is_std_vector<TT>::value) {
       boost::json::array array;
       for (auto &item : value.first) {
         json_archive temp;
-        serialization ser(temp);
+        serializer ser(temp);
         ser.direction = direction_t::serialization;
         item.serialization(ser);
         array.push_back(temp);
       }
       s[value.second] = array;
-    } else if constexpr (std::is_same_v<TT, std::any>) {
-      std::any &var = value.first;
-      if (!var.has_value()) {
-        return;
-      }
-      boost::json::object any_value;
-      any_value["typeid"] = std::type_index(var.type()).name();
-      any_value["content"] = "[context of any object]";
-      s[value.second] = any_value;
     } else {
       json_archive temp;
-      serialization ser(temp);
+      serializer ser(temp);
       ser.direction = direction_t::serialization;
       value.first.serialization(ser);
       s[value.second] = temp;
@@ -77,15 +107,15 @@ class serialization {
         value.first.clear();
         for (auto &item : s.at(value.second).as_array()) {
           typename TT::value_type temp;
-          serialization ser(item.as_object());
+          serializer ser(item.as_object());
           ser.direction = direction_t::deserialization;
           temp.serialization(ser);
           value.first.push_back(std::move(temp));
         }
-      } else if constexpr (std::is_same_v<TT, std::any>) {
-        auto item = s.at(value.second).as_object();
+      } else if constexpr (std::is_same_v<TT, json_any>) {
+        *static_cast<boost::json::object*>(&value.first) = s.at(value.second).as_object();
       } else {
-        serialization ser(s.at(value.second).as_object());
+        serializer ser(s.at(value.second).as_object());
         ser.direction = direction_t::deserialization;
         value.first.serialization(ser);
       }

@@ -30,7 +30,7 @@ struct Address {
   std::string city;
   std::string street;
   std::vector<Person> neighbor;
-  std::any secret;
+  serializer::json_any secret;
  public:
   template<typename S>
   void serialization(S &serializer) {
@@ -41,7 +41,7 @@ struct Address {
 
 struct Friend {
   std::string relation;
-  std::any secret;
+  serializer::json_any secret;
  public:
   template<typename S>
   void serialization(S &serializer) {
@@ -54,7 +54,7 @@ int main() {
   Address addr1{"china", "beijing", "wangjing", {{"name1", 12}, {"name2", 13}}, Singer{"aa", 12}};
 
   json_archive data;
-  serialization ser(data);
+  serializer ser(data);
   // serialization to data
   ser.direction = direction_t::serialization;
   addr1.serialization(ser);
@@ -65,5 +65,8 @@ int main() {
   ser.direction = direction_t::deserialization;
   addr2.serialization(ser);
   std::cout << addr2.city;
+  Singer singer2;
+  addr2.secret.any_cast(singer2);
+  std::cout << singer2.type;
 }
 
