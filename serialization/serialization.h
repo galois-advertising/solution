@@ -25,22 +25,19 @@ struct is_std_vector<std::vector<T,A>> : std::true_type {};
 
 class serializer {
   json_archive &archive;
+
  public:
   direction_t direction;
 
   class json_any : public boost::json::object {
     template<typename T>
-    void reset(T &&b) {
-      serializer ser(*this);
-      ser.direction = direction_t::serialization;
-      b.serialization(ser);
+    void reset(T &&any_value) {
+      dump_to(*this, _nvp(any_value));
     }
   public:
     template<typename T>
-    void any_cast(T &value) {
-      serializer ser(*this);
-      ser.direction = direction_t::deserialization;
-      value.serialization(ser);
+    void any_cast(T &any_value) {
+      parse_from(*this, _nvp(any_value));
     }
 
     template<typename T>
@@ -80,10 +77,8 @@ class serializer {
       boost::json::array array;
       for (auto &item : value.first) {
         json_archive temp;
-        serializer ser(temp);
-        ser.direction = direction_t::serialization;
-        item.serialization(ser);
-        array.push_back(temp);
+        dump_to(temp, _nvp(item));
+        array.push_back(temp.at("item"));
       }
       s[value.second] = array;
     } else {
@@ -100,17 +95,18 @@ class serializer {
     using TT = typename std::remove_reference<T>::type;
     if (s.contains(value.second.c_str())) {
       if constexpr (std::is_same_v<TT, int>) {
-        value.first = static_cast<int>(s.at(value.second).as_int64());
+        value.first = static_cast<TT>(s.at(value.second).as_int64());
+      } else if constexpr (std::is_same_v<TT, double> || std::is_same_v<TT, double>) {
+        value.first = static_cast<TT>(s.at(value.second).as_double());
       } else if constexpr (std::is_same_v<TT, std::string>) {
         value.first = s.at(value.second).as_string().c_str();
       } else if constexpr(is_std_vector<TT>::value) {
         value.first.clear();
         for (auto &item : s.at(value.second).as_array()) {
           typename TT::value_type temp;
-          serializer ser(item.as_object());
-          ser.direction = direction_t::deserialization;
-          temp.serialization(ser);
-          value.first.push_back(std::move(temp));
+          json_archive temp_archive{{"temp", item}};
+          parse_from(temp_archive, _nvp(temp));
+          value.first.push_back(temp);
         }
       } else if constexpr (std::is_same_v<TT, json_any>) {
         *static_cast<boost::json::object*>(&value.first) = s.at(value.second).as_object();

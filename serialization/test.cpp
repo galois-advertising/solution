@@ -30,28 +30,22 @@ struct Address {
   std::string city;
   std::string street;
   std::vector<Person> neighbor;
-  serializer::json_any secret;
+  serializer::json_any secret1;
+  serializer::json_any secret2;
+  serializer::json_any secret3;
+  serializer::json_any secret4;
  public:
   template<typename S>
   void serialization(S &serializer) {
-    serializer.do_serialization(_nvp(country), _nvp(city), _nvp(street));
-    serializer.do_serialization(_nvp(neighbor), _nvp(secret));
+    serializer.do_serialization(_nvp(country), _nvp(city), _nvp(street), _nvp(neighbor));
+    serializer.do_serialization(_nvp(secret1), _nvp(secret2), _nvp(secret3), _nvp(secret4));
   }
 };
-
-struct Friend {
-  std::string relation;
-  serializer::json_any secret;
- public:
-  template<typename S>
-  void serialization(S &serializer) {
-    serializer.do_serialization(_nvp(relation), _nvp(secret));
-  }
-};
-
 
 int main() {
-  Address addr1{"china", "beijing", "wangjing", {{"name1", 12}, {"name2", 13}}, Singer{"aa", 12}};
+  std::vector<int> int_vec{1, 2, 3, 4};
+  std::vector<Singer> class_vec{{"nnn", 13}};
+  Address addr1{"china", "beijing", "wangjing", {{"name1", 12}, {"name2", 13}}, Singer{"aa", 12}, int_vec, class_vec, 3.1415};
 
   json_archive data;
   serializer ser(data);
@@ -59,32 +53,19 @@ int main() {
   ser.direction = direction_t::serialization;
   addr1.serialization(ser);
   std::cout << data << std::endl;
-  /** now data is
-  {
-    "country": "china",
-    "city": "beijing",
-    "street": "wangjing",
-    "neighbor": [{
-      "name": "name1",
-      "age": 12
-    }, {
-      "name": "name2",
-      "age": 13
-    }],
-    "secret": {
-      "type": "aa",
-      "age": 12
-    }
-  }
-  **/
 
   // deserialization from data
   Address addr2;
   ser.direction = direction_t::deserialization;
   addr2.serialization(ser);
   std::cout << addr2.city;
-  Singer singer2;
-  addr2.secret.any_cast(singer2);
-  std::cout << singer2.type;
+  Singer class_secret;
+  addr2.secret1.any_cast(class_secret);
+  std::vector<int> int_vector_secret;
+  addr2.secret2.any_cast(int_vector_secret);
+  std::vector<Singer> class_vector_secret;
+  addr2.secret3.any_cast(class_vector_secret);
+  double double_secret;
+  addr2.secret4.any_cast(double_secret);
 }
 
