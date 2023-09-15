@@ -29,26 +29,28 @@ class serializer {
  public:
   direction_t direction;
 
-  class json_any : public boost::json::object {
+  class json_any : public std::any {
     template<typename T>
     void reset(T &&any_value) {
-      dump_to(*this, _nvp(any_value));
+      dump_to(storage, _nvp(any_value));
     }
   public:
-    template<typename T>
-    void any_cast(T &any_value) {
-      parse_from(*this, _nvp(any_value));
-    }
+    boost::json::object storage;
 
     template<typename T>
-    json_any(const T &b) {
+    void any_cast(T &any_value) {
+      parse_from(storage, _nvp(any_value));
+    }
+
+    json_any() : std::any() {}
+
+    template<typename T>
+    json_any(const T &b) : std::any(b) {
       reset(b);
     }
 
-    json_any() : boost::json::object() {}
-
     template<typename T>
-    json_any(T &&b) {
+    json_any(T &&b) : std::any(std::forward<T>(b)) {
       reset(std::forward<T>(b));
     }
 
@@ -71,8 +73,10 @@ class serializer {
   template<typename T>
   static void dump_to(json_archive &s, nvp<T> &&value) {
     using TT = typename std::remove_reference<T>::type;
-    if constexpr (std::is_fundamental_v<TT> || std::is_same_v<TT, std::string> || std::is_same_v<TT, json_any>) {
+    if constexpr (std::is_fundamental_v<TT> || std::is_same_v<TT, std::string>) {
       s[value.second] = value.first;
+    } if constexpr (std::is_same_v<TT, json_any>) {
+      s[value.second] = value.first.storage;
     } else if constexpr(is_std_vector<TT>::value) {
       boost::json::array array;
       for (auto &item : value.first) {
@@ -109,7 +113,7 @@ class serializer {
           value.first.push_back(temp);
         }
       } else if constexpr (std::is_same_v<TT, json_any>) {
-        *static_cast<boost::json::object*>(&value.first) = s.at(value.second).as_object();
+        *static_cast<boost::json::object*>(&value.first.storage) = s.at(value.second).as_object();
       } else {
         serializer ser(s.at(value.second).as_object());
         ser.direction = direction_t::deserialization;
