@@ -68,6 +68,13 @@ class serializer {
       dumper = [&](){ do_dump<T>(); };
       return *this;
     }
+
+    template<typename T, typename TT = std::remove_cv_t<T>>
+    TT any_cast() {
+      TT any_value;
+      parse_from(archive, _nvp(any_value));
+      return any_value;
+    }
   };
 
   serializer(json_archive &_stream) : archive(_stream) {
