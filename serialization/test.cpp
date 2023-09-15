@@ -26,6 +26,8 @@ public:
   }
 };
 struct Address {
+  int id;
+  double location;
   std::string country;
   std::string city;
   std::string street;
@@ -37,7 +39,7 @@ struct Address {
  public:
   template<typename S>
   void serialization(S &serializer) {
-    serializer.do_serialization(_nvp(country), _nvp(city), _nvp(street), _nvp(neighbor));
+    serializer.do_serialization(_nvp(id), _nvp(location), _nvp(country), _nvp(city), _nvp(street), _nvp(neighbor));
     serializer.do_serialization(_nvp(secret1), _nvp(secret2), _nvp(secret3), _nvp(secret4));
   }
 };
@@ -45,7 +47,8 @@ struct Address {
 int main() {
   std::vector<int> int_vec{1, 2, 3, 4};
   std::vector<Singer> class_vec{{"nnn", 13}};
-  Address addr1{"china", "beijing", "wangjing", {{"name1", 12}, {"name2", 13}}, Singer{"aa", 12}, int_vec, class_vec, 3.1415};
+  Address addr1{1, 1.2, "china", "beijing", "wangjing",
+                {{"name1", 12}, {"name2", 13}}, Singer{"aa", 12}, int_vec, class_vec, 3.1415};
 
   json_archive data;
   serializer ser(data);
