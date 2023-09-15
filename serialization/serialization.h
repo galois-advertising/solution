@@ -31,6 +31,8 @@ class serializer {
 
   struct json_any : public std::any {
     std::function<json_archive()> dumper;
+
+    // If this object is created by deserialization of json string, then the real data is stored in archive
     json_archive archive;
 
     template <typename T>
