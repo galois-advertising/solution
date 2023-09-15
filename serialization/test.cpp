@@ -62,13 +62,10 @@ int main() {
   ser.direction = direction_t::deserialization;
   addr2.serialization(ser);
   std::cout << addr2.city;
-  Singer class_secret;
-  addr2.secret1.any_cast(class_secret);
-  std::vector<int> int_vector_secret;
-  addr2.secret2.any_cast(int_vector_secret);
-  std::vector<Singer> class_vector_secret;
-  addr2.secret3.any_cast(class_vector_secret);
-  double double_secret;
-  addr2.secret4.any_cast(double_secret);
+  auto class_secret = addr2.secret1.any_cast<Singer>();
+  auto int_vector_secret = addr2.secret2.any_cast<std::vector<int>>();
+  auto class_vector_secret = addr2.secret3.any_cast<std::vector<Singer>>();
+  auto double_secret = addr2.secret4.any_cast<double>();
+  return 0;
 }
 
